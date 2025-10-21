@@ -21,15 +21,7 @@ _next_id.counter = 0
 
 
 def tree_to_dot(root: PTNode) -> str:
-    """
-    Exporta el árbol en formato DOT (Graphviz).
 
-    Args:
-        root: Nodo raíz del árbol
-
-    Returns:
-        String con la representación DOT del árbol
-    """
     lines = ["digraph G {", 'node [shape=ellipse];']
 
     def walk(n: PTNode):
@@ -48,16 +40,7 @@ def tree_to_dot(root: PTNode) -> str:
 
 
 def tree_to_pretty_text(root: PTNode, indent: str = "") -> str:
-    """
-    Convierte el árbol a texto con indentación.
 
-    Args:
-        root: Nodo raíz del árbol
-        indent: String de indentación actual
-
-    Returns:
-        Representación en texto del árbol
-    """
     s = indent + root.label + "\n"
     for ch in root.children:
         s += tree_to_pretty_text(ch, indent + "  ")

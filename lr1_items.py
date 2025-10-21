@@ -6,7 +6,6 @@ from grammar import first_of_seq, END
 
 @dataclass(frozen=True)
 class Item:
-    """Item LR(1): [A → α•β, a]"""
     prod_idx: int
     dot: int
     look: str

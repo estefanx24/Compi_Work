@@ -7,10 +7,6 @@ END = "$"
 
 
 def parse_grammar_text(gram_text: str):
-    """
-    Formato por línea:
-        A -> α1 | α2 | ...   (usa 'ε' para vacío)
-    """
     lines = [ln.strip() for ln in gram_text.strip().splitlines() if ln.strip()]
     prods: List[Tuple[str, List[str]]] = []
     heads = []
