@@ -1,7 +1,7 @@
-# parser_lr1.py — LR(1) canónico con tablas ACTION/GOTO y simulación
+# parser_lr1.py — LR(1) canónico con FIRST/FOLLOW, ACTION/GOTO, traza y árbol de derivación
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Tuple, Set, Dict, Iterable
+from typing import List, Tuple, Set, Dict, Iterable, Optional
 import pandas as pd
 
 EPS = "ε"
@@ -37,7 +37,7 @@ def parse_grammar_text(gram_text: str):
 # FIRST por símbolo (con $)
 # -----------------------------
 def first_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[str, List[str]]]):
-    # IMPORTANTE: incluir END ($) como símbolo con FIRST($) = {$}
+    # Incluir END ($) con FIRST($) = {$}
     symbols = set(nonterminals) | set(terminals) | {END}
     FIRST: Dict[str, Set[str]] = {X: set() for X in symbols}
     for t in set(terminals) | {END}:
@@ -76,6 +76,39 @@ def first_of_seq(seq: Iterable[str], FIRST: Dict[str, Set[str]]):
     else:
         out.add(EPS)
     return out
+
+# -----------------------------
+# FOLLOW por no terminal
+# -----------------------------
+def follow_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[str, List[str]]], start: str, FIRST: Dict[str, Set[str]]):
+    FOLLOW: Dict[str, Set[str]] = {A: set() for A in nonterminals}
+    FOLLOW[start].add(END)  # start incluye $
+
+    changed = True
+    while changed:
+        changed = False
+        for A, alpha in prods:
+            n = len(alpha)
+            for i, B in enumerate(alpha):
+                if B in nonterminals:
+                    beta = alpha[i+1:]
+                    if beta:
+                        first_beta = first_of_seq(beta, FIRST) - {EPS}
+                        before = len(FOLLOW[B])
+                        FOLLOW[B] |= first_beta
+                        if len(FOLLOW[B]) != before:
+                            changed = True
+                        if EPS in first_of_seq(beta, FIRST):
+                            before = len(FOLLOW[B])
+                            FOLLOW[B] |= FOLLOW[A]
+                            if len(FOLLOW[B]) != before:
+                                changed = True
+                    else:
+                        before = len(FOLLOW[B])
+                        FOLLOW[B] |= FOLLOW[A]
+                        if len(FOLLOW[B]) != before:
+                            changed = True
+    return FOLLOW
 
 # -----------------------------
 # Aumentar gramática
@@ -198,6 +231,16 @@ def build_tables(prods, start, terminals, nonterminals, FIRST):
 # -----------------------------
 # Helpers para UI/tablas/trace
 # -----------------------------
+def first_follow_to_df(FIRST: Dict[str, Set[str]], FOLLOW: Dict[str, Set[str]], nonterminals: Set[str]):
+    rows = []
+    for A in sorted(nonterminals):
+        rows.append({
+            "Símbolo": A,
+            "FIRST": ", ".join(sorted(FIRST.get(A, set()))),
+            "FOLLOW": ", ".join(sorted(FOLLOW.get(A, set()))),
+        })
+    return pd.DataFrame(rows)
+
 def action_table_df(ACTION, terminals, nstates):
     rows = []
     cols = sorted(list(terminals)) + [END]
@@ -238,7 +281,51 @@ def states_to_str(states, aug):
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
+# -----------------------------
+# Árbol de derivación
+# -----------------------------
+@dataclass
+class PTNode:
+    label: str
+    children: List["PTNode"]
+    id: Optional[int] = None      # para DOT
+
+def _next_id():
+    _next_id.counter += 1
+    return _next_id.counter
+_next_id.counter = 0
+
+def tree_to_dot(root: PTNode) -> str:
+    """
+    Exporta el árbol en formato DOT (Graphviz).
+    """
+    lines = ["digraph G {", 'node [shape=ellipse];']
+    def walk(n: PTNode):
+        if n.id is None:
+            n.id = _next_id()
+        lines.append(f'  n{n.id} [label="{n.label}"];')
+        for ch in n.children:
+            if ch.id is None:
+                ch.id = _next_id()
+            lines.append(f'  n{n.id} -> n{ch.id};')
+            walk(ch)
+    walk(root)
+    lines.append("}")
+    return "\n".join(lines)
+
+def tree_to_pretty_text(root: PTNode, indent: str = "") -> str:
+    s = indent + root.label + "\n"
+    for ch in root.children:
+        s += tree_to_pretty_text(ch, indent + "  ")
+    return s
+
+# -----------------------------
+# Simulación LR(1) con árbol
+# -----------------------------
 def analizar_cadena_lr(input_str: str, ACTION, GOTO, aug, start):
+    """
+    Traza LR(1) (sin árbol), para compatibilidad con tu UI previa.
+    """
     tokens = input_str.strip().split() + [END]
     pos = 0
     st_states = [0]
@@ -280,3 +367,69 @@ def analizar_cadena_lr(input_str: str, ACTION, GOTO, aug, start):
             break
 
     return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"])
+
+def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start) -> Tuple[pd.DataFrame, Optional[PTNode]]:
+    """
+    Igual que analizar_cadena_lr, pero construye árbol:
+      - shift: apila un nodo terminal con el lexema
+      - reduce A->β: crea nodo A con hijos β (en orden), lo apila
+      - ε: nodo A sin hijos
+    Retorna (traza_df, root) — root es el nodo raíz o None si falla.
+    """
+    tokens = input_str.strip().split() + [END]
+    pos = 0
+    st_states = [0]
+    st_syms: List[str] = []
+    node_stack: List[PTNode] = []
+    frames = []
+
+    def a(): return tokens[pos]
+
+    while True:
+        s = st_states[-1]
+        act = ACTION.get((s, a()))
+        stack_show = f"{' '.join(map(str, st_states))} || {' '.join(st_syms)}"
+        inp_show = " ".join(tokens[pos:])
+        if act is None:
+            frames.append((stack_show, inp_show, f"Error: no ACTION[{s}, {a()}]"))
+            frames.append(("", "", "CADENA NO VÁLIDA"))
+            return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), None
+
+        kind, arg = act
+        if kind == "shift":
+            # nodo terminal
+            term_node = PTNode(label=a(), children=[])
+            node_stack.append(term_node)
+            frames.append((stack_show, inp_show, f"shift -> s{arg}"))
+            st_states.append(arg); st_syms.append(a()); pos += 1
+
+        elif kind == "reduce":
+            H,B = aug[arg]
+            k = len(B)
+            # hijos: pop k nodos (en orden de aparición)
+            children = []
+            if k:
+                # Los nodos extraídos están en orden inverso (por la pila)
+                children = node_stack[-k:]
+                node_stack = node_stack[:-k]
+                st_states = st_states[:-k]
+                st_syms = st_syms[:-k]
+            # crear nodo de no terminal H con hijos en el orden correcto
+            new_node = PTNode(label=H, children=list(children))
+            node_stack.append(new_node)
+
+            s2 = st_states[-1]
+            g = GOTO.get((s2, H))
+            if g is None:
+                frames.append((stack_show, inp_show, f"Error: no GOTO[{s2}, {H}]"))
+                frames.append(("", "", "CADENA NO VÁLIDA"))
+                return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), None
+            st_states.append(g); st_syms.append(H)
+            frames.append((stack_show, inp_show, f"reduce {H} → {' '.join(B) if B else EPS}; goto s{g}"))
+
+        else:  # accept
+            frames.append((stack_show, inp_show, "ACCEPT"))
+            frames.append(("", "", "CADENA VÁLIDA"))
+            # Raíz: si la gramática aumentada es S'->S, la cima debe ser S
+            root = node_stack[-1] if node_stack else None
+            return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), root
