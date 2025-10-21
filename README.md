@@ -3,7 +3,7 @@
 
 ## Requisitos
 ```bash
-pip install streamlit graphviz
+pip install streamlit pandas graphviz
 ```
 > Para `st.graphviz_chart` no necesitas instalar binarios de Graphviz (solo la librería Python).
 
