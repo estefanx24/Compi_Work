@@ -191,7 +191,7 @@ if st.button("🚀 Analizar", type="primary"):
                     st.code(states_to_str(states, augmented))
 
             # Simulación + Árbol
-            st.subheader("🧾 Traza de ejecución")
+            st.subheader("🧾 Traza LR(1)")
             with st.spinner("Analizando cadena..."):
                 trace_df, root = analizar_cadena_lr_con_arbol(
                     input_str, ACTION, GOTO, augmented, start
