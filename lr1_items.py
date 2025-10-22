@@ -1,15 +1,12 @@
-# lr1_items.py — Items LR(1), CLOSURE y GOTO
 from dataclasses import dataclass
 from typing import Set
 from grammar import first_of_seq, END
-
 
 @dataclass(frozen=True)
 class Item:
     prod_idx: int
     dot: int
     look: str
-
 
 def closure(items: Set[Item], prods, by_head, FIRST, nonterminals: Set[str]):
     C = set(items)
@@ -35,9 +32,7 @@ def closure(items: Set[Item], prods, by_head, FIRST, nonterminals: Set[str]):
             changed = True
     return C
 
-
 def goto(I: Set[Item], X: str, prods):
-    """Calcula GOTO(I, X): mueve el punto sobre el símbolo X."""
     J = set()
     for it in I:
         pidx, dot, la = it.prod_idx, it.dot, it.look
@@ -46,11 +41,8 @@ def goto(I: Set[Item], X: str, prods):
             J.add(Item(pidx, dot + 1, la))
     return J
 
-
 def canonical_collection(prods, start, FIRST, terminals, nonterminals):
-    """Construye la colección canónica de conjuntos de items LR(1)."""
     from grammar import augment, prods_by_head
-
     aug, S_ = augment(prods, start)
     by_head = prods_by_head(aug)
     I0 = closure({Item(len(aug) - 1, 0, END)}, aug, by_head, FIRST, nonterminals | {S_})

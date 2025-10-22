@@ -1,20 +1,16 @@
-# parser_tables.py — Construcción de tablas ACTION y GOTO
-from typing import Dict, Set
-from lr1_items import canonical_collection, closure, goto, Item
+from typing import Dict
+from lr1_items import canonical_collection, closure, goto
 from grammar import prods_by_head, END
-
 
 def build_tables(prods, start, terminals, nonterminals, FIRST):
     C, index, aug, S_ = canonical_collection(prods, start, FIRST, terminals, nonterminals)
     ACTION: Dict[tuple, tuple] = {}
     GOTO: Dict[tuple, int] = {}
     conflicts = []
-
     def add_action(k, v):
         if k in ACTION and ACTION[k] != v:
             conflicts.append(f"Conflicto en ACTION{k}: {ACTION[k]} vs {v}")
         ACTION[k] = v
-
     by_head = prods_by_head(aug)
     for i, I in enumerate(C):
         for it in I:

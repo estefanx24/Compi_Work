@@ -1,10 +1,8 @@
-# grammar.py — Manejo de gramáticas y cálculo de FIRST
 from collections import defaultdict
 from typing import List, Tuple, Set, Dict, Iterable
 
 EPS = "ε"
 END = "$"
-
 
 def parse_grammar_text(gram_text: str):
     lines = [ln.strip() for ln in gram_text.strip().splitlines() if ln.strip()]
@@ -16,7 +14,7 @@ def parse_grammar_text(gram_text: str):
         heads.append(left)
         for alt in right.split("|"):
             body = alt.strip().split()
-            if body == [EPS]:  # epsilon
+            if body == [EPS]:
                 body = []
             prods.append((left, body))
     start = heads[0]
@@ -25,10 +23,7 @@ def parse_grammar_text(gram_text: str):
     terminals = {s for s in symbols_in_bodies if s not in nonterminals}
     return prods, start, nonterminals, terminals
 
-
 def first_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[str, List[str]]]):
-    """Calcula los conjuntos FIRST para todos los símbolos."""
-    # IMPORTANTE: incluir END ($) como símbolo con FIRST($) = {$}
     symbols = set(nonterminals) | set(terminals) | {END}
     FIRST: Dict[str, Set[str]] = {X: set() for X in symbols}
     for t in set(terminals) | {END}:
@@ -55,12 +50,10 @@ def first_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[st
                 changed = True
     return FIRST
 
-
 def first_of_seq(seq: Iterable[str], FIRST: Dict[str, Set[str]]):
-    """Calcula FIRST de una secuencia de símbolos."""
     out = set()
     for s in seq:
-        if s == END:  # blindaje para lookahead $
+        if s == END:
             out.add(END)
             break
         fs = FIRST[s]
@@ -71,12 +64,9 @@ def first_of_seq(seq: Iterable[str], FIRST: Dict[str, Set[str]]):
         out.add(EPS)
     return out
 
-
 def follow_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[str, List[str]]], start: str, FIRST: Dict[str, Set[str]]):
-    """Calcula los conjuntos FOLLOW para todos los no terminales."""
     FOLLOW: Dict[str, Set[str]] = {A: set() for A in nonterminals}
-    FOLLOW[start].add(END)  # start incluye $
-
+    FOLLOW[start].add(END)
     changed = True
     while changed:
         changed = False
@@ -103,19 +93,13 @@ def follow_sets(nonterminals: Set[str], terminals: Set[str], prods: List[Tuple[s
                             changed = True
     return FOLLOW
 
-
 def augment(prods: List[Tuple[str, List[str]]], start: str):
-    """
-    Aumenta la gramática con S' -> S si no está ya aumentada.
-    """
     if prods and len(prods[0][1]) == 1 and prods[0][0].endswith("'") and prods[0][1][0] == start:
         return list(prods), prods[0][0]
     S_ = f"{start}'"
     return prods + [(S_, [start])], S_
 
-
 def prods_by_head(prods):
-    """Indexa las producciones por su cabeza."""
     mp = defaultdict(list)
     for i, (H, B) in enumerate(prods):
         mp[H].append((i, H, B))

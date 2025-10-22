@@ -1,11 +1,8 @@
-# parser_utils.py — Utilidades para visualización de tablas, estados y FIRST/FOLLOW
 import pandas as pd
 from typing import Dict, Set
 from grammar import END
 
-
 def first_follow_to_df(FIRST: Dict[str, Set[str]], FOLLOW: Dict[str, Set[str]], nonterminals: Set[str]):
-
     rows = []
     for A in sorted(nonterminals):
         rows.append({
@@ -14,7 +11,6 @@ def first_follow_to_df(FIRST: Dict[str, Set[str]], FOLLOW: Dict[str, Set[str]], 
             "FOLLOW": ", ".join(sorted(FOLLOW.get(A, set()))),
         })
     return pd.DataFrame(rows)
-
 
 def action_table_df(ACTION, terminals, nstates):
     rows = []
@@ -36,7 +32,6 @@ def action_table_df(ACTION, terminals, nstates):
         rows.append(row)
     return pd.DataFrame(rows).set_index("state")
 
-
 def goto_table_df(G, nonterminals, nstates):
     rows = []
     cols = sorted(list(nonterminals))
@@ -46,7 +41,6 @@ def goto_table_df(G, nonterminals, nstates):
             row[A] = G.get((s, A), "")
         rows.append(row)
     return pd.DataFrame(rows).set_index("state")
-
 
 def states_to_str(states, aug):
     blocks = []
