@@ -4,12 +4,8 @@ from typing import List, Tuple, Optional
 from grammar import EPS, END
 from parse_tree import PTNode
 
-
 def analizar_cadena_lr(input_str: str, ACTION, GOTO, aug, start):
-    """
-    Realiza el análisis sintáctico LR(1) de una cadena de entrada.
-    Retorna un DataFrame con la traza del análisis.
-    """
+
     tokens = input_str.strip().split() + [END]
     pos = 0
     st_states = [0]
@@ -60,14 +56,7 @@ def analizar_cadena_lr(input_str: str, ACTION, GOTO, aug, start):
 
 
 def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start):
-    """
-    Mismo formato de tu app:
-      - Columnas: "Pila (estados || símbolos)", "Entrada", "Acción"
-      - shift: una fila
-      - reduce: DOS filas (primero "reduce A → α", luego "goto sX" con la pila ya actualizada)
-      - accept/error: como antes
-    También construye el árbol (node_stack) como ya lo tenías.
-    """
+
     tokens = input_str.strip().split() + [END]
     pos = 0
     st_states = [0]
