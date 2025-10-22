@@ -5,7 +5,6 @@ from grammar import prods_by_head, END
 
 
 def build_tables(prods, start, terminals, nonterminals, FIRST):
-    """Construye las tablas ACTION y GOTO para el parser LR(1)."""
     C, index, aug, S_ = canonical_collection(prods, start, FIRST, terminals, nonterminals)
     ACTION: Dict[tuple, tuple] = {}
     GOTO: Dict[tuple, int] = {}

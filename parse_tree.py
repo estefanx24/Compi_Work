@@ -5,14 +5,12 @@ from typing import List, Optional
 
 @dataclass
 class PTNode:
-    """Nodo del árbol de derivación."""
     label: str
     children: List["PTNode"]
     id: Optional[int] = None  # para DOT
 
 
 def _next_id():
-    """Generador de IDs únicos para nodos."""
     _next_id.counter += 1
     return _next_id.counter
 

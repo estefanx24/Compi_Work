@@ -5,7 +5,7 @@ from grammar import END
 
 
 def first_follow_to_df(FIRST: Dict[str, Set[str]], FOLLOW: Dict[str, Set[str]], nonterminals: Set[str]):
-    """Genera un DataFrame con los conjuntos FIRST y FOLLOW."""
+
     rows = []
     for A in sorted(nonterminals):
         rows.append({
@@ -17,7 +17,6 @@ def first_follow_to_df(FIRST: Dict[str, Set[str]], FOLLOW: Dict[str, Set[str]], 
 
 
 def action_table_df(ACTION, terminals, nstates):
-    """Genera un DataFrame con la tabla ACTION."""
     rows = []
     cols = sorted(list(terminals)) + [END]
     for s in range(nstates):
@@ -39,7 +38,6 @@ def action_table_df(ACTION, terminals, nstates):
 
 
 def goto_table_df(G, nonterminals, nstates):
-    """Genera un DataFrame con la tabla GOTO."""
     rows = []
     cols = sorted(list(nonterminals))
     for s in range(nstates):
@@ -51,7 +49,6 @@ def goto_table_df(G, nonterminals, nstates):
 
 
 def states_to_str(states, aug):
-    """Convierte los estados LR(1) a una representación legible."""
     blocks = []
     for i, I in enumerate(states):
         lines = []

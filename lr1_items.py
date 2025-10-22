@@ -12,7 +12,6 @@ class Item:
 
 
 def closure(items: Set[Item], prods, by_head, FIRST, nonterminals: Set[str]):
-    """Calcula la clausura de un conjunto de items LR(1)."""
     C = set(items)
     changed = True
     while changed:
