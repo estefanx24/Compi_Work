@@ -59,25 +59,14 @@ def analizar_cadena_lr(input_str: str, ACTION, GOTO, aug, start):
     return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"])
 
 
-def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start) -> Tuple[pd.DataFrame, Optional[PTNode]]:
+def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start):
     """
-    Análisis sintáctico LR(1) con construcción del árbol de derivación.
-
-    - shift: apila un nodo terminal con el lexema
-    - reduce A->β: crea nodo A con hijos β (en orden), lo apila
-    - ε: nodo A sin hijos
-
-    Args:
-        input_str: Cadena de entrada a analizar
-        ACTION: Tabla ACTION del parser
-        GOTO: Tabla GOTO del parser
-        aug: Gramática aumentada
-        start: Símbolo inicial
-
-    Returns:
-        Tupla (traza_df, root) donde:
-        - traza_df: DataFrame con la traza del análisis
-        - root: Nodo raíz del árbol de derivación (None si hay error)
+    Mismo formato de tu app:
+      - Columnas: "Pila (estados || símbolos)", "Entrada", "Acción"
+      - shift: una fila
+      - reduce: DOS filas (primero "reduce A → α", luego "goto sX" con la pila ya actualizada)
+      - accept/error: como antes
+    También construye el árbol (node_stack) como ya lo tenías.
     """
     tokens = input_str.strip().split() + [END]
     pos = 0
@@ -92,20 +81,21 @@ def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start) -> Tu
     while True:
         s = st_states[-1]
         act = ACTION.get((s, a()))
-        stack_show = f"{' '.join(map(str, st_states))} || {' '.join(st_syms)}"
-        inp_show = " ".join(tokens[pos:])
+        pila_show = f"{' '.join(map(str, st_states))} || {' '.join(st_syms)}"
+        entrada_show = " ".join(tokens[pos:])
 
         if act is None:
-            frames.append((stack_show, inp_show, f"Error: no ACTION[{s}, {a()}]"))
+            frames.append((pila_show, entrada_show, f"Error: no ACTION[{s}, {a()}]"))
             frames.append(("", "", "CADENA NO VÁLIDA"))
             return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), None
 
         kind, arg = act
         if kind == "shift":
-            # Crear nodo terminal
+            # nodo terminal para el árbol
             term_node = PTNode(label=a(), children=[])
             node_stack.append(term_node)
-            frames.append((stack_show, inp_show, f"shift -> s{arg}"))
+
+            frames.append((pila_show, entrada_show, f"shift -> s{arg}"))
             st_states.append(arg)
             st_syms.append(a())
             pos += 1
@@ -113,33 +103,38 @@ def analizar_cadena_lr_con_arbol(input_str: str, ACTION, GOTO, aug, start) -> Tu
         elif kind == "reduce":
             H, B = aug[arg]
             k = len(B)
-            # Extraer hijos: pop k nodos (en orden de aparición)
+
+            # hijos del árbol
             children = []
             if k:
-                # Los nodos extraídos están en orden correcto (últimos k)
                 children = node_stack[-k:]
                 node_stack = node_stack[:-k]
                 st_states = st_states[:-k]
                 st_syms = st_syms[:-k]
 
-            # Crear nodo de no terminal H con hijos en el orden correcto
             new_node = PTNode(label=H, children=list(children))
             node_stack.append(new_node)
 
+            # 1) fila SOLO de reduce (sin goto)
+            frames.append((pila_show, entrada_show, f"reduce {H} → {' '.join(B) if B else EPS}"))
+
+            # GOTO
             s2 = st_states[-1]
             g = GOTO.get((s2, H))
             if g is None:
-                frames.append((stack_show, inp_show, f"Error: no GOTO[{s2}, {H}]"))
+                frames.append((pila_show, entrada_show, f"Error: no GOTO[{s2}, {H}]"))
                 frames.append(("", "", "CADENA NO VÁLIDA"))
                 return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), None
 
             st_states.append(g)
             st_syms.append(H)
-            frames.append((stack_show, inp_show, f"reduce {H} → {' '.join(B) if B else EPS}; goto s{g}"))
+
+            # 2) fila de goto con la pila YA ACTUALIZADA
+            pila_after = f"{' '.join(map(str, st_states))} || {' '.join(st_syms)}"
+            frames.append((pila_after, entrada_show, f"goto s{g}"))
 
         else:  # accept
-            frames.append((stack_show, inp_show, "ACCEPT"))
+            frames.append((pila_show, entrada_show, "ACCEPT"))
             frames.append(("", "", "CADENA VÁLIDA"))
-            # Raíz: si la gramática aumentada es S'->S, la cima debe ser S
             root = node_stack[-1] if node_stack else None
             return pd.DataFrame(frames, columns=["Pila (estados || símbolos)", "Entrada", "Acción"]), root
