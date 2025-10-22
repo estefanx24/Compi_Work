@@ -1,13 +1,5 @@
-# app.py — LR(1) con FIRST/FOLLOW, ACTION/GOTO, items, traza y árbol
 import streamlit as st
 import pandas as pd
-
-try:
-    from graphviz import Source
-
-    HAS_GRAPHVIZ = True
-except ImportError:
-    HAS_GRAPHVIZ = False
 
 from parser_lr1 import (
     parse_grammar_text,
@@ -36,32 +28,13 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        body {
-            background-color: #1e1e1e; /* Fondo gris oscuro premium */
-            color: #f5f5f5; /* Texto blanco suave */
-        }
-        .streamlit-expanderHeader {
-            color: #f7a600; /* Color dorado para los encabezados */
-        }
-        .stButton>button {
-            background-color: #f7a600; /* Botón dorado */
-            color: white; /* Texto blanco en los botones */
-            border-radius: 8px;
-            border: none;
-        }
-        .stButton>button:hover {
-            background-color: #f5a300; /* Hover dorado más oscuro */
-        }
-        .css-1d391kg { /* Sidebar */
-            background-color: #262626; /* Sidebar gris oscuro */
-        }
-        .css-1d391kg .css-1v0mbdj { /* Titulo del sidebar */
-            color: #f7a600;
-        }
-        .stTextInput>div>div>input {
-            background-color: #333333; /* Fondo oscuro para entradas de texto */
-            color: #f5f5f5; /* Texto claro en entradas */
-        }
+        body { background-color: #1e1e1e; color: #f5f5f5; }
+        .streamlit-expanderHeader { color: #f7a600; }
+        .stButton>button { background-color: #f7a600; color: white; border-radius: 8px; border: none; }
+        .stButton>button:hover { background-color: #f5a300; }
+        .css-1d391kg { background-color: #262626; }
+        .css-1d391kg .css-1v0mbdj { color: #f7a600; }
+        .stTextInput>div>div>input { background-color: #333333; color: #f5f5f5; }
     </style>
     """,
     unsafe_allow_html=True
@@ -98,7 +71,6 @@ with st.sidebar:
         "Ejemplos predefinidos:",
         options=["Personalizado"] + list(EXAMPLES.keys())
     )
-
     show_states = st.checkbox("Mostrar items LR(1)", value=False)
     show_productions = st.checkbox("Mostrar producciones", value=False)
 
@@ -142,14 +114,10 @@ if st.button("🚀 Analizar", type="primary"):
 
             # Información general
             col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Estados", len(states))
-            with col2:
-                st.metric("No terminales", len(nonterminals))
-            with col3:
-                st.metric("Terminales", len(terminals))
-            with col4:
-                st.metric("Producciones", len(prods))
+            with col1: st.metric("Estados", len(states))
+            with col2: st.metric("No terminales", len(nonterminals))
+            with col3: st.metric("Terminales", len(terminals))
+            with col4: st.metric("Producciones", len(prods))
 
             # Conflictos
             if conflicts:
@@ -202,18 +170,14 @@ if st.button("🚀 Analizar", type="primary"):
             # Árbol de derivación
             if root is not None:
                 st.subheader("🌳 Árbol de derivación")
-
                 tab1, tab2 = st.tabs(["📊 Visualización gráfica", "📝 Representación textual"])
 
                 with tab1:
-                    if HAS_GRAPHVIZ:
-                        dot = tree_to_dot(root)
-                        st.graphviz_chart(dot)
-                    else:
-                        st.warning(
-                            "⚠️ Librería `graphviz` no instalada. "
-                            "Instala con: `pip install graphviz`"
-                        )
+                    try:
+                        dot = tree_to_dot(root)  # genera un string DOT
+                        st.graphviz_chart(dot)   # renderiza sin librería graphviz externa
+                    except Exception as e:
+                        st.warning(f"No se pudo renderizar el árbol como gráfico: {e}")
                         st.code(tree_to_pretty_text(root))
 
                 with tab2:
